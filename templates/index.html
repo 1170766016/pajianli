@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简历智能筛选系统</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #273548;
+            --bg-input: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+            --glass: rgba(30, 41, 59, 0.8);
+            --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 背景动画 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+            z-index: -1;
+            animation: bgPulse 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgPulse {
+            0% { opacity: 0.8; }
+            100% { opacity: 1.2; }
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-light), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .navbar-brand .icon {
+            font-size: 1.5rem;
+            -webkit-text-fill-color: initial;
+        }
+
+        .navbar-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 主内容 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* 统计卡片 */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15);
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-card .value.primary { color: var(--primary-light); }
+        .stat-card .value.success { color: var(--success); }
+        .stat-card .value.warning { color: var(--warning); }
+        .stat-card .value.danger { color: var(--danger); }
+
+        /* 主体布局 */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1.5rem;
+        }
+
+        /* 卡片通用样式 */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* 上传区域 */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-zone .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .upload-zone .title {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* 文件列表 */
+        .file-list {
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+            transition: background 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .file-item:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .file-item .info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .file-item .info .name {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-item .meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .file-badge {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .file-badge.pdf { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .file-badge.docx { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .file-badge.doc { background: rgba(59, 130, 246, 0.1); color: #93c5fd; }
+        .file-badge.txt { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+        .file-badge.html { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .btn-delete:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* JD 编辑区 */
+        .jd-textarea {
+            width: 100%;
+            min-height: 180px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 1rem;
+            resize: vertical;
+            transition: border-color 0.3s;
+            line-height: 1.6;
+        }
+
+        .jd-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* 按钮 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            width: 100%;
+            padding: 1rem;
+            font-size: 1rem;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary-light);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* 结果区域 */
+        .results-empty {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .results-empty .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .results-empty .title { font-size: 1.1rem; margin-bottom: 0.5rem; }
+
+        /* 候选人卡片 */
+        .candidate-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+            overflow: hidden;
+        }
+
+        .candidate-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+        }
+
+        .candidate-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+        }
+
+        .candidate-header .left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .candidate-rank {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .rank-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1e293b; }
+        .rank-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: white; }
+        .rank-3 { background: linear-gradient(135deg, #d97706, #b45309); color: white; }
+        .rank-default { background: var(--bg-input); color: var(--text-secondary); }
+
+        .candidate-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .candidate-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .score-circle {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .score-circle::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            padding: 3px;
+            background: conic-gradient(var(--score-color) calc(var(--score-pct) * 1%), var(--border) 0);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+
+        .recommendation-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-recommend { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge-maybe { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .badge-reject { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+        /* 候选人详情展开 */
+        .candidate-detail {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .candidate-detail.open {
+            max-height: 800px;
+        }
+
+        .candidate-detail-inner {
+            padding: 0 1.5rem 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* 维度评分条 */
+        .dimension-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.6rem 0;
+        }
+
+        .dimension-name {
+            width: 80px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .dimension-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-input);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .dimension-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+
+        .dimension-score {
+            width: 36px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .dimension-comment {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            padding-left: 96px;
+            margin-top: -4px;
+            margin-bottom: 4px;
+        }
+
+        /* 评价标签 */
+        .evaluation-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .eval-box {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+        }
+
+        .eval-box .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .eval-box .content {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .overall-comment {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .overall-comment .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        /* 加载动画 */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .loading-overlay.active { display: flex; }
+
+        .loading-spinner {
+            width: 60px; height: 60px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .loading-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Toast 通知 */
+        .toast {
+            position: fixed;
+            top: 80px;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            z-index: 2000;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: var(--success); color: white; }
+        .toast.error { background: var(--danger); color: white; }
+        .toast.info { background: var(--primary); color: white; }
+
+        /* 下载区 */
+        .download-bar {
+            display: none;
+            padding: 1rem 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: var(--radius-sm);
+            margin-bottom: 1rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .download-bar.show { display: flex; }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 1rem; }
+            .stats-row { grid-template-columns: 1fr; }
+            .evaluation-section { grid-template-columns: 1fr; }
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <span class="icon">📋</span>
+            简历智能筛选系统
+        </div>
+        <div class="navbar-info">
+            <span class="status-dot"></span>
+            <span id="modelInfo">加载中...</span>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card">
+                <div class="label">📄 简历总数</div>
+                <div class="value primary" id="statTotal">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">⭐ 推荐面试</div>
+                <div class="value success" id="statRecommend">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">🔶 可以考虑</div>
+                <div class="value warning" id="statMaybe">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">❌ 不推荐</div>
+                <div class="value danger" id="statReject">0</div>
+            </div>
+        </div>
+
+        <!-- 主体 -->
+        <div class="main-grid">
+            <!-- 左侧控制面板 -->
+            <div>
+                <!-- 上传区 -->
+                <div class="card" style="margin-bottom: 1.25rem;">
+                    <div class="card-header">
+                        <h3>📤 上传简历</h3>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);" id="fileCount">0 个文件</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-zone" id="uploadZone">
+                            <input type="file" id="fileInput" multiple
+                                   accept=".pdf,.docx,.doc,.html,.htm,.txt">
+                            <div class="icon">📁</div>
+                            <div class="title">拖拽文件到此处或点击上传</div>
+                            <div class="subtitle">支持 PDF / DOCX / DOC / HTML / TXT</div>
+                        </div>
+                        <div class="file-list" id="fileList"></div>
+                    </div>
+                </div>
+
+                <!-- JD 配置 -->
+                <div class="card" style="margin-bottom: 1.25rem;">
+                    <div class="card-header">
+                        <h3>📝 岗位要求</h3>
+                        <button class="btn btn-outline btn-sm" onclick="resetJD()">重置</button>
+                    </div>
+                    <div class="card-body">
+                        <textarea class="jd-textarea" id="jdTextarea" placeholder="输入岗位描述..."></textarea>
+                    </div>
+                </div>
+
+                <!-- 开始分析按钮 -->
+                <button class="btn btn-primary" id="analyzeBtn" onclick="startAnalysis()">
+                    🚀 开始智能分析
+                </button>
+            </div>
+
+            <!-- 右侧结果区域 -->
+            <div>
+                <!-- 下载栏 -->
+                <div class="download-bar" id="downloadBar">
+                    <span>📊 Excel 报告已生成</span>
+                    <button class="btn btn-outline btn-sm" id="downloadBtn" onclick="downloadReport()">
+                        ⬇️ 下载报告
+                    </button>
+                </div>
+
+                <!-- 结果列表 -->
+                <div id="resultsContainer">
+                    <div class="results-empty">
+                        <div class="icon">🔍</div>
+                        <div class="title">等待分析</div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">
+                            上传简历文件并点击"开始智能分析"
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">🤖 AI 正在分析简历...</div>
+        <div class="loading-sub">这可能需要几分钟，取决于简历数量和模型响应速度</div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============================================================
+        // 状态管理
+        // ============================================================
+        let currentConfig = {};
+        let reportFile = null;
+
+        // ============================================================
+        // 初始化
+        // ============================================================
+        async function init() {
+            await loadConfig();
+            await loadResumes();
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                currentConfig = await res.json();
+                document.getElementById('jdTextarea').value = currentConfig.jd || '';
+                document.getElementById('modelInfo').textContent =
+                    `模型: ${currentConfig.model} | ${currentConfig.base_url}`;
+            } catch (e) {
+                showToast('获取配置失败', 'error');
+            }
+        }
+
+        async function loadResumes() {
+            try {
+                const res = await fetch('/api/resumes');
+                const data = await res.json();
+                renderFileList(data.resumes);
+                document.getElementById('fileCount').textContent = `${data.total} 个文件`;
+                document.getElementById('statTotal').textContent = data.total;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function resetJD() {
+            document.getElementById('jdTextarea').value = currentConfig.jd || '';
+            showToast('已重置为默认岗位要求', 'info');
+        }
+
+        // ============================================================
+        // 文件上传
+        // ============================================================
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            uploadZone.addEventListener(evt, e => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(evt => {
+            uploadZone.addEventListener(evt, e => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+            });
+        });
+
+        uploadZone.addEventListener('drop', e => {
+            const files = e.dataTransfer.files;
+            if (files.length) uploadFiles(files);
+        });
+
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length) {
+                uploadFiles(e.target.files);
+                e.target.value = '';
+            }
+        });
+
+        async function uploadFiles(files) {
+            const formData = new FormData();
+            for (const file of files) {
+                formData.append('files', file);
+            }
+
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                showToast(data.message, data.errors.length ? 'error' : 'success');
+                await loadResumes();
+            } catch (e) {
+                showToast('上传失败: ' + e.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // 文件列表
+        // ============================================================
+        function renderFileList(files) {
+            const container = document.getElementById('fileList');
+            if (!files.length) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = files.map(f => {
+                const ext = f.format.replace('.', '');
+                const sizeKB = (f.size / 1024).toFixed(1);
+                return `
+                    <div class="file-item fade-in">
+                        <div class="info">
+                            <span class="file-badge ${ext}">${ext}</span>
+                            <span class="name" title="${f.name}">${f.name}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="meta">${sizeKB}KB</span>
+                            <button class="btn-delete" onclick="deleteFile('${f.name}')" title="删除">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function deleteFile(name) {
+            if (!confirm(`确定删除 ${name}？`)) return;
+            try {
+                await fetch(`/api/resumes/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                showToast(`已删除: ${name}`, 'info');
+                await loadResumes();
+            } catch (e) {
+                showToast('删除失败', 'error');
+            }
+        }
+
+        // ============================================================
+        // 分析
+        // ============================================================
+        async function startAnalysis() {
+            const btn = document.getElementById('analyzeBtn');
+            const loading = document.getElementById('loadingOverlay');
+
+            btn.disabled = true;
+            loading.classList.add('active');
+
+            try {
+                const formData = new FormData();
+                const jd = document.getElementById('jdTextarea').value.trim();
+                if (jd) formData.append('jd', jd);
+
+                const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || '分析失败');
+                }
+
+                const data = await res.json();
+                reportFile = data.report_file;
+                renderResults(data.results);
+                updateStats(data.results);
+
+                if (reportFile) {
+                    document.getElementById('downloadBar').classList.add('show');
+                }
+
+                showToast(`分析完成！共 ${data.total} 份简历`, 'success');
+            } catch (e) {
+                showToast(e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                loading.classList.remove('active');
+            }
+        }
+
+        // ============================================================
+        // 结果渲染
+        // ============================================================
+        function updateStats(results) {
+            const recommend = results.filter(r => r.total_score >= (currentConfig.recommend_threshold || 70)).length;
+            const maybe = results.filter(r => {
+                const s = r.total_score;
+                return s >= (currentConfig.maybe_threshold || 50) && s < (currentConfig.recommend_threshold || 70);
+            }).length;
+            const reject = results.filter(r => r.total_score < (currentConfig.maybe_threshold || 50)).length;
+
+            document.getElementById('statTotal').textContent = results.length;
+            document.getElementById('statRecommend').textContent = recommend;
+            document.getElementById('statMaybe').textContent = maybe;
+            document.getElementById('statReject').textContent = reject;
+        }
+
+        function renderResults(results) {
+            const container = document.getElementById('resultsContainer');
+
+            if (!results.length) {
+                container.innerHTML = `
+                    <div class="results-empty">
+                        <div class="icon">📭</div>
+                        <div class="title">没有找到结果</div>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = results.map((r, i) => {
+                const scoreColor = getScoreColor(r.total_score);
+                const badgeClass = getBadgeClass(r.total_score);
+                const rankClass = i < 3 ? `rank-${i + 1}` : 'rank-default';
+
+                return `
+                <div class="candidate-card fade-in" style="animation-delay: ${i * 0.1}s">
+                    <div class="candidate-header" onclick="toggleDetail(${i})">
+                        <div class="left">
+                            <div class="candidate-rank ${rankClass}">${i + 1}</div>
+                            <div>
+                                <div class="candidate-name">${r.name || r.file_name}</div>
+                                <div class="candidate-meta">
+                                    ${r.education} · ${r.work_years} · ${r.file_name}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:1rem;">
+                            <span class="recommendation-badge ${badgeClass}">${r.recommendation}</span>
+                            <div class="score-circle"
+                                 style="--score-color: ${scoreColor}; --score-pct: ${r.total_score}; color: ${scoreColor};">
+                                ${r.total_score}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="candidate-detail" id="detail-${i}">
+                        <div class="candidate-detail-inner">
+                            ${r.error ? `<div style="color:var(--danger);padding:1rem 0;">⚠️ ${r.error}</div>` : `
+                                <div style="margin-top:1rem;">
+                                    ${r.dimensions.map(d => `
+                                        <div class="dimension-row">
+                                            <span class="dimension-name">${d.name}</span>
+                                            <div class="dimension-bar-bg">
+                                                <div class="dimension-bar" style="width:${d.score}%"></div>
+                                            </div>
+                                            <span class="dimension-score">${d.score}</span>
+                                        </div>
+                                        ${d.comment ? `<div class="dimension-comment">${d.comment}</div>` : ''}
+                                    `).join('')}
+                                </div>
+                                <div class="evaluation-section">
+                                    <div class="eval-box">
+                                        <div class="label">💪 优势</div>
+                                        <div class="content">${r.strengths || '暂无'}</div>
+                                    </div>
+                                    <div class="eval-box">
+                                        <div class="label">📌 不足</div>
+                                        <div class="content">${r.weaknesses || '暂无'}</div>
+                                    </div>
+                                </div>
+                                <div class="overall-comment">
+                                    <div class="label">📝 总体评价</div>
+                                    ${r.overall_comment || '暂无'}
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleDetail(index) {
+            const el = document.getElementById(`detail-${index}`);
+            el.classList.toggle('open');
+        }
+
+        function getScoreColor(score) {
+            if (score >= 70) return '#10b981';
+            if (score >= 50) return '#f59e0b';
+            return '#ef4444';
+        }
+
+        function getBadgeClass(score) {
+            if (score >= 70) return 'badge-recommend';
+            if (score >= 50) return 'badge-maybe';
+            return 'badge-reject';
+        }
+
+        // ============================================================
+        // 下载报告
+        // ============================================================
+        function downloadReport() {
+            if (reportFile) {
+                window.open(`/api/download/${encodeURIComponent(reportFile)}`);
+            }
+        }
+
+        // ============================================================
+        // Toast
+        // ============================================================
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>

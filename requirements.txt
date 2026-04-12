@@ -1,0 +1,22 @@
+# 简历解析
+beautifulsoup4>=4.12.0
+pdfplumber>=0.10.0
+python-docx>=1.0.0
+lxml>=5.0.0
+
+# LLM 调用 (OpenAI 兼容接口，DeepSeek 也用这个)
+openai>=1.0.0
+
+# 报告生成
+openpyxl>=3.1.0
+
+# 工具
+rich>=13.0.0
+
+# 爬虫 (前程无忧简历抓取)
+playwright>=1.40.0
+
+# Web 服务端 (app.py 需要)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
